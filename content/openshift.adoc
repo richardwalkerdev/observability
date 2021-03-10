@@ -1,0 +1,6 @@
+== OpenShift
+
+Time to deploy these stacks on OpenShift.
+
+
+// This is a comment and won't be rendered.

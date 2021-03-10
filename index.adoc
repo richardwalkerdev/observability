@@ -1,0 +1,34 @@
+= Observability
+Richard Walker <me@richardwalker.dev>
+1.0, April 01, 2021, Documentation
+:toc: left
+:toclevels: 5
+:icons: font
+:stem: latexmath
+:quick-uri: https://asciidoctor.org/docs/asciidoc-syntax-quick-reference/
+:stylesheet: css/theme-combo.css
+:source-highlighter: coderay
+:coderay-linenums-mode: inline
+:coderay-css: class
+
+== Native Components
+
+include::content/introduction.adoc[]
+
+include::content/nfs.adoc[]
+include::content/postgresql.adoc[]
+include::content/haproxy.adoc[]
+
+include::content/prometheus.adoc[]
+include::content/alertmanager.adoc[]
+include::content/thanos.adoc[]
+include::content/grafana.adoc[]
+
+include::content/efk.adoc[]
+include::content/loki.adoc[]
+
+include::content/openshift.adoc[]
+
+include::content/conclusion.adoc[]
+
+// This is a comment and won't be rendered.
