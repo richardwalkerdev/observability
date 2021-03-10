@@ -1,0 +1,6 @@
+== Using Ansible
+
+It obvious that all this manual implementation is not very practical, and sure, there are Ansible Roles available on Ansible Galaxy to deploy most of this stuff. That said, understanding the requirements close up and personally paves the way to automate this yourself.
+
+
+// This is a comment and won't be rendered.

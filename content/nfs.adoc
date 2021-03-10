@@ -1,4 +1,61 @@
 == NFS File shares
 
+This NFS share example is using host a `192.168.0.200` on a Linux host attached to same network as nodes.
+
+[source%nowrap,bash]
+----
+dnf install nfs-utils -y
+systemctl enable --now rpcbind
+systemctl enable --now nfs-server
+----
+
+Create a directory to share:
+
+[source%nowrap,bash]
+----
+mkdir -p /nfs/rules /nfs/targets
+----
+
+Add the share to configuration:
+
+[source%nowrap,bash]
+----
+vi /etc/exports
+----
+
+[source%nowrap,bash]
+----
+/nfs/rules               192.168.0.1/24(rw,sync,no_wdelay,no_root_squash,insecure)
+/nfs/targets             192.168.0.1/24(rw,sync,no_wdelay,no_root_squash,insecure)
+/nfs/alertmanagers       192.168.0.1/24(rw,sync,no_wdelay,no_root_squash,insecure)
+/nfs/thanos              192.168.0.1/24(rw,sync,no_wdelay,no_root_squash,insecure)
+----
+
+IMPORTANT: NFS is typically NOT recommended for real environments, See https://thanos.io/tip/thanos/storage.md/ for configuring access to object storage and the supported clients.
+
+Export the new share with:
+
+[source%nowrap,bash]
+----
+exportfs -arv
+----
+
+And confirm the share is visible:
+
+[source%nowrap,bash]
+----
+exportfs  -s
+showmount -e 127.0.0.1
+----
+
+If required, open up the firewall ports needed:
+
+[source%nowrap,bash]
+----
+firewall-cmd --permanent --add-service=nfs
+firewall-cmd --permanent --add-service=rpc-bind
+firewall-cmd --permanent --add-service=mountd
+firewall-cmd --reload
+----
 
 // This is a comment and won't be rendered.

@@ -1,3 +1,264 @@
-== Elasticsearch, Fluentd and Kibana (EFK)
+== EFK
+
+*Elasticsearch, Fluentd and Kibana*
+
+Create a Virtual Machine, this example uses 4 CPU cores, 8GB of memory and 60GB storage with bridge networking so the IP Address of the EFK VM is on the same network as my OpenShift 4.6 home lab.
+
+Assuming CentOS 8.2 is installed on the VM, make sure all is up-to-date:
+
+[source%nowrap,bash]
+----
+dnf update -y
+reboot
+----
+
+Install Java:
+
+[source%nowrap,bash]
+----
+dnf install java-11-openjdk-devel -y
+----
+
+Add EPEL:
+
+[source%nowrap,bash]
+----
+dnf install epel-release -y
+----
+
+Reducing steps in this document and to remove potential issues, disabling both SELinux and `firewalld`:
+
+[source%nowrap,bash]
+----
+vi /etc/sysconfig/selinux
+----
+
+[source%nowrap,bash]
+----
+SELINUX=disabled
+----
+
+[source%nowrap,bash]
+----
+systemctl stop firewalld
+systemctl disable firewalld
+----
+
+*Elasticsearch*
+
+Add the Elasticsearch repository:
+
+[source%nowrap,bash]
+----
+vi /etc/yum.repos.d/elasticsearch.repo
+----
+
+[source%nowrap,bash]
+----
+[elasticsearch-7.x]
+name=Elasticsearch repository for 7.x packages
+baseurl=https://artifacts.elastic.co/packages/7.x/yum
+gpgcheck=1
+gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
+enabled=1
+autorefresh=1
+type=rpm-md
+----
+
+Import the key:
+
+[source%nowrap,bash]
+----
+rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch
+----
+
+Install Eleasticsearch:
+
+[source%nowrap,bash]
+----
+dnf install elasticsearch -y
+----
+
+Back up the original configuration:
+
+[source%nowrap,bash]
+----
+cp /etc/elasticsearch/elasticsearch.yml /etc/elasticsearch/elasticsearch.yml.original
+----
+
+Strip out the noise:
+
+[source%nowrap,bash]
+----
+grep -v -e '^#' -e '^$' /etc/elasticsearch/elasticsearch.yml.original > /etc/elasticsearch/elasticsearch.yml
+----
+
+Add the following settings to expose Elasticsearch to the network:
+
+[source%nowrap,yaml]
+----
+cluster.name: my-efk
+path.data: /var/lib/elasticsearch
+path.logs: /var/log/elasticsearch
+transport.host: localhost
+transport.tcp.port: 9300
+http.port: 9200
+network.host: 0.0.0.0
+cluster.initial_master_nodes: node-1
+----
+
+Start and enable the service:
+
+[source%nowrap,bash]
+----
+systemctl enable elasticsearch.service --now
+----
+
+*Kibana*
+
+Install Kibana:
+
+[source%nowrap,bash]
+----
+dnf install kibana -y
+----
+
+Back up the original configuration:
+
+[source%nowrap,bash]
+----
+cp /etc/kibana/kibana.yml /etc/kibana/kibana.yml.original
+----
+
+Update the configuration for the Elasticsearch host:
+
+[source%nowrap,bash]
+----
+vi /etc/kibana/kibana.yml
+----
+----
+elasticsearch.hosts: [“http://localhost:9200"]
+----
+
+Start and enable Kibana:
+
+[source%nowrap,bash]
+----
+systemctl enable kibana.service --now
+----
+
+*NGINX*
+
+Install NGINX:
+
+[source%nowrap,bash]
+----
+dnf install nginx -y
+----
+
+Create a user name and password for Kibana:
+
+[source%nowrap,bash]
+----
+echo "kibana:`openssl passwd -apr1`" | tee -a /etc/nginx/htpasswd.kibana
+----
+
+Back up the original configuration:
+
+[source%nowrap,bash]
+----
+cp /etc/kibana/kibana.yml /etc/kibana/kibana.yml.original
+----
+
+Add the following configuration:
+
+[source%nowrap,bash]
+----
+vi /etc/kibana/kibana.yml
+----
+
+[source%nowrap,bash]
+----
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log;
+pid /run/nginx.pid;
+include /usr/share/nginx/modules/*.conf;
+events {
+    worker_connections 1024;
+}
+http {
+    log_format main '$remote_addr — $remote_user [$time_local] "$request"'
+    '$status $body_bytes_sent "$http_referer"'
+    '"$http_user_agent" "$http_x_forwarded_for"';
+    access_log /var/log/nginx/access.log main;
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    include /etc/nginx/conf.d/*.conf;
+    server {
+        listen 80;
+        server_name _;
+        auth_basic "Restricted Access";
+        auth_basic_user_file /etc/nginx/htpasswd.kibana;
+    location / {
+        proxy_pass http://localhost:5601;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection ‘upgrade’;
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        }
+    }
+}
+----
+
+Start and enable NGINX:
+
+[source%nowrap,bash]
+----
+systemctl enable nginx.service --now
+----
+
+*Smoke Testing*
+
+Smoke testing
+
+With all that in place, test Elasticsearch is up and running, the following should return a JSON response:
+
+[source%nowrap,bash]
+----
+curl http://127.0.0.1:9200/_cluster/health?pretty
+----
+
+You should be able access Kibana via a browser at the IP Address of your instance, in my case http://192.168.0.70
+
+Once in there, navigate to *"Management" -> "Stack Management", Under "Kibana" -> "Index Patterns"* and click *"Create Index Pattern"*. This is where you will see various sources to index.
+
+From a command line PUT an example data:
+
+[source%nowrap,bash]
+----
+curl -X PUT "192.168.0.70:9200/characters/_doc/1?pretty" -H 'Content-Type: application/json' -d '{"name": "Mickey Mouse"}
+curl -X PUT "192.168.0.70:9200/characters/_doc/2?pretty" -H 'Content-Type: application/json' -d '{"name": "Daffy Duck"}
+curl -X PUT "192.168.0.70:9200/characters/_doc/3?pretty" -H 'Content-Type: application/json' -d '{"name": "Donald Duck"}
+curl -X PUT "192.168.0.70:9200/characters/_doc/4?pretty" -H 'Content-Type: application/json' -d '{"name": "Bugs Bunny"}
+----
+
+In Kibana, when you go to *"Create Index Pattern"* as described before, you should now see `characters` has appeared, type `characters*` and click *"Next step"* and create the index pattern. Navigate to *"Kibana" -> "Discover"* and if you have more than one *"Index Pattern"* select the `characters*` index from the drop-down menu (near top left) and you should see the data you PUT into Elasticsearch.
+
+This pattern is what I use to see and add indexes to Kibana when adding forwarders.
+
+For reference you can return individual results using:
+
+[source%nowrap,bash]
+----
+curl -X GET "localhost:9200/characters/_doc/1?pretty"
+----
+
 
 // This is a comment and won't be rendered.

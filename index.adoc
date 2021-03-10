@@ -11,8 +11,6 @@ Richard Walker <me@richardwalker.dev>
 :coderay-linenums-mode: inline
 :coderay-css: class
 
-== Native Components
-
 include::content/introduction.adoc[]
 
 include::content/nfs.adoc[]

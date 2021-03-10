@@ -1,5 +1,118 @@
 == PostgreSQL
 
+PostgreSQL is a powerful, open-source object-relational database system that has earned a strong reputation for reliability, feature robustness, and performance.
 
+In many cases, databases are external entities. Many cloud providers now provide PostgreSQL-as-a-service or project may opt for standing up a dedicated instance or instances in a highly available configuration. It may be therefore preferable to host PostgresSQL in a virtual machine locally to replicate such environments.
+
+These steps detail deploying PostgreSQL using CentOS Stream 8.
+
+*Installation*
+
+Install PostgreSQL 12 from the module stream:
+
+[source%nowrap,bash]
+----
+dnf install @postgresql:12 -y
+----
+
+*Database configuration*
+
+First step is to initialise PostgrSQL:
+
+[source%nowrap,bash]
+----
+/usr/bin/postgresql-setup --initdb
+----
+
+*Enable and start service*
+
+[source%nowrap,bash]
+----
+systemctl enable postgresql.service --now
+----
+
+*Open access*
+
+If `firewalld` is being used, add the service:
+
+[source%nowrap,bash]
+----
+firewall-cmd --add-service=postgresql --permanent
+firewall-cmd --reload
+----
+
+Access PostgreSQL:
+
+[source%nowrap,bash]
+----
+su - postgres
+psql
+----
+
+Create a user and database:
+
+[source%nowrap,sql]
+----
+CREATE USER grafana WITH PASSWORD 'changeme';
+ALTER ROLE grafana SET client_encoding TO 'utf8';
+ALTER ROLE grafana SET default_transaction_isolation TO 'read committed';
+ALTER ROLE grafana SET timezone TO 'UTC';
+CREATE DATABASE grafana_db;
+GRANT ALL PRIVILEGES ON DATABASE grafana_db TO grafana;
+----
+
+List and quit:
+
+[source%nowrap,bash]
+----
+\l
+\q
+exit
+----
+
+Ensure it is configured to listen on the IP Address of the host.
+
+Edit `vi /var/lib/pgsql/data/postgresql.conf`:
+
+[source%nowrap]
+----
+listen_addresses = '192.168.0.160'
+----
+
+And update the configuration to allow any host on the same subnet to access the database.
+
+Edit `vi /var/lib/pgsql/data/pg_hba.conf`:
+
+Original:
+
+[source%nowrap]
+----
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+local   all             all                                     peer
+host    all             all             127.0.0.1/32            ident
+host    all             all             ::1/128                 ident
+local   replication     all                                     peer
+host    replication     all             127.0.0.1/32            ident
+host    replication     all             ::1/128                 ident
+----
+
+[source%nowrap]
+----
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+local   all             all                                     peer
+host    all             all             127.0.0.1/32            md5
+host    all             all             192.168.0.1/24          md5
+host    all             all             ::1/128                 md5
+local   replication     all                                     peer
+host    replication     all             127.0.0.1/32            ident
+host    replication     all             ::1/128                 ident
+----
+
+Restart PostgreSQL service:
+
+[source%nowrap,bash]
+----
+systemctl restart postgresql
+----
 
 // This is a comment and won't be rendered.

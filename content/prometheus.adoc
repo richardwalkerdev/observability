@@ -2,8 +2,145 @@
 
 Prometheus is a free software application used for event monitoring and alerting. It records real-time metrics in a time series database (allowing for high dimensionality) built using a HTTP pull model, with flexible queries and real-time alerting. The project is written in Go and licensed under the Apache 2 License.
 
+The good news is that Prometheus is at the heart of this whole micro-service architecture. At its most basic it could be all that is needed. Any target to be scraped for metrics and any alerting rule is all done here using Prometheus. Every other component is peripheral, either extending or handing off responsibility or consuming data for visualisation and storage.
 
+This section deal with deploying Prometheus on two Virtual Machines, mounting NFS shares for the target and rules configuration and load balancing the two Prometheus instances. Think of each instance of Prometheus as a Replica.
 
+image::images/prometheus.png[Prometheus]
 
+Add a service user account:
+
+[source%nowrap,bash]
+----
+useradd -m -s /bin/false prometheus
+----
+
+Create two directories:
+
+[source%nowrap,bash]
+----
+mkdir -p /etc/prometheus /var/lib/prometheus
+----
+
+Change ownership of directories:
+
+[source%nowrap,bash]
+----
+chown prometheus:prometheus /etc/prometheus /var/lib/prometheus/
+----
+
+Get the latest download link from https://prometheus.io/download/:
+
+[source%nowrap,bash]
+----
+dnf install wget -y
+wget https://github.com/prometheus/prometheus/releases/download/v2.24.1/prometheus-2.24.1.linux-amd64.tar.gz
+----
+
+Extract the archive and copy binaries into place:
+
+[source%nowrap,bash]
+----
+dnf install tar -y
+tar -xvf prometheus-2.24.1.linux-amd64.tar.gz
+cd prometheus-2.24.1.linux-amd64
+cp prometheus promtool /usr/local/bin/
+----
+
+Check the path is correct and versions:
+
+[source%nowrap,bash]
+----
+prometheus --version
+promtool --version
+----
+
+Always use the IP Address or preferably DNS name, not `localhost` for scrape targets:
+
+IMPORTANT: Global `external_labels` are added to either identify each prometheus instances in a HA configuration or the prometheus cluster, if labels are identical on each instance.
+
+*Same config on both nodes*
+
+[source%nowrap,bash]
+----
+vi /etc/prometheus/prometheus.yml
+----
+
+[source%nowrap,yaml]
+----
+# Global config
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  scrape_timeout: 15s
+  external_labels:
+    cluster: prometheus-cluster
+    region: europe
+    environment: dev
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+    - targets: ['0.0.0.0:9090']
+----
+
+Create a service using `systemd`, adding `--web.listen-address=:9090`:
+
+To reduce the time to begin archiving use minutes, example:
+
+[source%nowrap]
+----
+    --storage.tsdb.max-block-duration=30m \
+    --storage.tsdb.min-block-duration=30m \
+----
+
+[source%nowrap,bash]
+----
+vi /etc/systemd/system/prometheus.service
+----
+
+[source%nowrap,bash]
+----
+[Unit]
+Description=Prometheus Service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=prometheus
+Group=prometheus
+Type=simple
+LimitNOFILE=65536
+ExecStart=/usr/local/bin/prometheus \
+    --config.file /etc/prometheus/prometheus.yml \
+    --storage.tsdb.path /var/lib/prometheus/ \
+    --web.console.templates=/etc/prometheus/consoles \
+    --web.console.libraries=/etc/prometheus/console_libraries \
+    --storage.tsdb.max-block-duration=2h \
+    --storage.tsdb.min-block-duration=2h \
+    --web.listen-address=:9090
+
+[Install]
+WantedBy=multi-user.target
+----
+
+Start and enable the Prometheus:
+
+[source%nowrap,bash]
+----
+systemctl daemon-reload
+systemctl enable prometheus --now
+systemctl status prometheus
+----
+
+NOTE: Prometheus store its data under `/var/lib/prometheus` by default.
+
+Open firewall port:
+
+[source%nowrap,bash]
+----
+firewall-cmd --add-port=9090/tcp --permanent
+firewall-cmd --reload
+----
 
 // This is a comment and won't be rendered.

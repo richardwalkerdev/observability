@@ -1,5 +1,5 @@
 == Thanos
 
-
+IMPORTANT: NFS is typically NOT recommended for real environments, See https://thanos.io/tip/thanos/storage.md/ for configuring access to object storage and the supported clients.
 
 // This is a comment and won't be rendered.
