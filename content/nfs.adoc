@@ -1,6 +1,6 @@
 == NFS File shares
 
-This NFS share example is using host a `192.168.0.200` on a Linux host attached to same network as nodes.
+This NFS share example is using host a `192.168.0.70` on a Linux host attached to same network as nodes.
 
 [source%nowrap,bash]
 ----
@@ -40,12 +40,19 @@ Export the new share with:
 exportfs -arv
 ----
 
-And confirm the share is visible:
+And confirm the share is visible locally:
 
 [source%nowrap,bash]
 ----
 exportfs  -s
 showmount -e 127.0.0.1
+----
+
+And from another host:
+
+[source%nowrap,bash]
+----
+showmount -e 192.168.0.70
 ----
 
 If required, open up the firewall ports needed:
