@@ -212,6 +212,38 @@ And observer there are no alerts configured yet:
 
 Remember to think of each instance of Prometheus as a Replica behind the load balancer, this mean any instance of Prometheus need the same configuration. Deploying this stack nativly on VMs or cloud instacnes (appose to using containers), the config directories might as well be mounted file systems. 
 
+Make two directories for the target config and rules:
 
+[source%nowrap,bash]
+----
+mkdir -p /etc/prometheus/targets /etc/prometheus/rules
+----
+
+Added the following to `fstab`:
+
+[source%nowrap,bash]
+----
+vi /etc/fstab
+----
+
+[source%nowrap,bash]
+----
+192.168.0.200:/nfs/targets /etc/prometheus/targets nfs rw,sync,hard,intr 0 0
+192.168.0.200:/nfs/rules /etc/prometheus/rules nfs rw,sync,hard,intr 0 0
+----
+
+Ensure `nfs-utils` is installed:
+
+[source%nowrap,bash]
+----
+dnf install nfs-utils -y
+----
+
+And mount the NFS shares (created at the start of this page):
+
+[source%nowrap,bash]
+----
+mount -a
+----
 
 // This is a comment and won't be rendered.
