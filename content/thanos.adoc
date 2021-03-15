@@ -2,4 +2,215 @@
 
 IMPORTANT: NFS is typically NOT recommended for real environments, See https://thanos.io/tip/thanos/storage.md/ for configuring access to object storage and the supported clients.
 
+=== Thanos Sidecar
+
+Get the latest release link from https://github.com/thanos-io/thanos/releases/:
+
+[source%nowrap,bash]
+----
+wget https://github.com/thanos-io/thanos/releases/download/v0.18.0/thanos-0.18.0.linux-amd64.tar.gz
+----
+
+Extract the archive:
+
+[source%nowrap,bash]
+----
+tar -xvf thanos-0.18.0.linux-amd64.tar.gz
+----
+
+Move into the extracted directory and copy the two Prometheus binary files to a suitable path:
+
+[source%nowrap,bash]
+----
+cd thanos-0.18.0.linux-amd64
+cp thanos /usr/local/bin/
+----
+
+Confirm version:
+
+[source%nowrap,bash]
+----
+thanos --version
+thanos, version 0.18.0 (branch: HEAD, revision: 60d45a02d46858a38013283b578017a171cf7b82)
+  build user:       root@4cf3f59273a2
+  build date:       20210127-12:18:59
+  go version:       go1.15.7
+  platform:         linux/amd64
+----
+
+Create a configuration directory for Thanos and a directory to use for mounting the NFS share for storing Prometheus data:
+
+[source%nowrap,bash]
+----
+mkdir -p /thanos /etc/thanos/
+chown prometheus:prometheus /thanos /etc/thanos/
+----
+
+Check NFS share is visable from host:
+
+[source%nowrap,bash]
+----
+dnf install nfs-utils -y
+
+showmount -e 192.168.0.200
+----
+
+Mount the NFS share:
+
+[source%nowrap,bash]
+----
+vi /etc/fstab
+----
+
+[source%nowrap,bash]
+----
+192.168.0.200:/nfs/thanos /thanos               nfs     defaults        0 0
+----
+
+[source%nowrap,bash]
+----
+mount -a
+df -h
+----
+
+Add the file system config:
+
+[source%nowrap,bash]
+----
+vi /etc/thanos/file_system.yaml
+----
+
+[source%nowrap,yaml]
+----
+type: FILESYSTEM
+config:
+  directory: "/thanos"
+----
+
+[source%nowrap,bash]
+----
+chown prometheus:prometheus /etc/thanos/file_system.yaml
+----
+
+Create a service for Thanos Sidecar using `systemd`, including options for the existing Prometheus data directory, Prometheus endpoint and the object store configuration file:
+
+[source%nowrap,bash]
+----
+vi /etc/systemd/system/thanos_sidecar.service
+----
+
+[source%nowrap,bash]
+----
+[Unit]
+Description=Thanos Sidecar
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=prometheus
+Group=prometheus
+Type=simple
+ExecStart=/usr/local/bin/thanos sidecar \
+    --tsdb.path=/var/lib/prometheus \
+    --prometheus.url=http://0.0.0.0:9090 \
+    --objstore.config-file=/etc/thanos/file_system.yaml \
+    --http-address=0.0.0.0:10902 \
+    --grpc-address=0.0.0.0:10901
+
+[Install]
+WantedBy=multi-user.target
+----
+
+Start and enable the Thanos Sidecar:
+
+[source%nowrap,bash]
+----
+systemctl daemon-reload
+systemctl enable thanos_sidecar --now
+systemctl status thanos_sidecar
+----
+
+=== Thanos Store
+
+[source%nowrap,bash]
+----
+vi /etc/systemd/system/thanos_store.service
+----
+
+[source%nowrap,bash]
+----
+[Unit]
+Description=Thanos Store
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=prometheus
+Group=prometheus
+Type=simple
+ExecStart=/usr/local/bin/thanos store \
+    --objstore.config-file=/etc/thanos/file_system.yaml \
+    --http-address=0.0.0.0:10906 \
+    --grpc-address=0.0.0.0:10905 \
+    --data-dir=/etc/thanos \
+    --log.level=debug
+
+[Install]
+WantedBy=multi-user.target
+----
+
+Start and enable the Thanos Store:
+
+[source%nowrap,bash]
+----
+systemctl daemon-reload
+systemctl enable thanos_store --now
+systemctl status thanos_store
+----
+
+=== Thanos Query
+
+Create a service for Thanos Query using `systemd`, note the two `store` arguments, one for the Thanos Store and one for the Thanos Sidecar.
+
+[source%nowrap,bash]
+----
+vi /etc/systemd/system/thanos_query.service
+----
+
+[source%nowrap,bash]
+----
+[Unit]
+Description=Thanos Query
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=prometheus
+Group=prometheus
+Type=simple
+ExecStart=/usr/local/bin/thanos query \
+    --http-address=0.0.0.0:10904 \
+    --grpc-address=0.0.0.0:10903 \
+    --store=0.0.0.0:10901 \
+    --store=0.0.0.0:10905
+
+[Install]
+WantedBy=multi-user.target
+----
+
+Start and enable the Thanos Query:
+
+[source%nowrap,bash]
+----
+systemctl daemon-reload
+systemctl enable thanos_query --now
+systemctl status thanos_query
+----
+
+[source%nowrap,bash]
+----
+firewall-cmd --add-port=10904/tcp --permanent
+firewall-cmd --reload
+----
+
 // This is a comment and won't be rendered.

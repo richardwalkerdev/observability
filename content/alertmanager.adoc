@@ -1,4 +1,133 @@
 == Alertmanager
 
+Add a service user account:
+
+[source%nowrap,bash]
+----
+useradd -m -s /bin/false alertmanager
+----
+
+Get the latest download link from https://prometheus.io/download/. For example https://github.com/prometheus/alertmanager/releases/download/v0.21.0/alertmanager-0.21.0.linux-amd64.tar.gz.
+
+[source%nowrap,bash]
+----
+wget https://github.com/prometheus/alertmanager/releases/download/v0.21.0/alertmanager-0.21.0.linux-amd64.tar.gz
+----
+
+Extract the archive:
+
+[source%nowrap,bash]
+----
+tar -xvf alertmanager-0.21.0.linux-amd64.tar.gz
+----
+
+Move into the extracted directory:
+
+[source%nowrap,bash]
+----
+cd alertmanager-0.21.0.linux-amd64
+----
+
+Copy the `alertmanager` binary to a suitable path:
+
+[source%nowrap,bash]
+----
+cp alertmanager /usr/local/bin/
+----
+
+Change the ownership of `alertmanager`:
+
+[source%nowrap,bash]
+----
+chown alertmanager:alertmanager /usr/local/bin/alertmanager
+----
+
+[source%nowrap,bash]
+----
+mkdir /etc/alertmanager
+vi /etc/alertmanager/alertmanager.yml
+----
+
+[source%nowrap,yaml]
+----
+global:
+  smtp_smarthost: 'smtp.example.net:587'
+  smtp_from: 'AlertManager <mailer@example.com>'
+  smtp_require_tls: true
+  smtp_hello: 'alertmanager'
+  smtp_auth_username: 'username'
+  smtp_auth_password: 'changme'
+
+route:
+  group_by: ['instance', 'alert']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 3h
+  receiver: staging
+
+receivers:
+  - name: 'staging'
+    email_configs:
+      - to: 'user@example.com'
+----
+
+Create a service for `alertmanager` using `systemd`, example includes a custom port `5100`:
+
+[source%nowrap,bash]
+----
+vi /etc/systemd/system/alertmanager.service
+----
+
+[source%nowrap,bash]
+----
+[Unit]
+Description=Prometheus Alert Manager
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=alertmanager
+Group=alertmanager
+Type=simple
+ExecStart=/usr/local/bin/alertmanager \
+    --config.file=/etc/alertmanager/alertmanager.yml \
+    --web.external-url http://192.168.0.200:9093
+WorkingDirectory=/etc/alertmanager
+
+[Install]
+WantedBy=multi-user.target
+----
+
+Start and enable the Alertmanager:
+
+[source%nowrap,bash]
+----
+systemctl daemon-reload
+systemctl enable alertmanager.service --now
+----
+
+Add the following configuration to Prometheus configuration:
+
+[source%nowrap,bash]
+----
+vi /etc/prometheus/prometheus.yml
+----
+
+[source%nowrap,yaml]
+----
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets:
+      - localhost:9093
+----
+
+And restart Prometheus:
+
+----
+systemctl enable prometheus.service
+----
+
+With this configured, go back to Prometheus to configure some alerts. Alerts will only appear in Alertmanager if they fire.
 
 // This is a comment and won't be rendered.
