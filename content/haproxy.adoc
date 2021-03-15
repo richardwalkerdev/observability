@@ -70,6 +70,13 @@ listen stats
 
 This `haproxy.conf` example is the minimal configuration ready to add load balancers later.
 
+Set the SELinux boolean to allow haproxy to connect to any port:
+
+[source%nowrap,bash]
+----
+setsebool -P haproxy_connect_any=1
+----
+
 Open firewall:
 
 [source%nowrap,bash]
@@ -86,5 +93,7 @@ systemctl enable haproxy.service --now
 ----
 
 View the graphical statistics report at http://192.168.0.70:9000/stats. In this example the username is `admin` and password is `changeme`. 
+
+This should be all set for adding load balancers.
 
 // This is a comment and won't be rendered.
