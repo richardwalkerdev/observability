@@ -76,7 +76,7 @@ Edit `vi /var/lib/pgsql/data/postgresql.conf`:
 
 [source%nowrap]
 ----
-listen_addresses = '192.168.0.160'
+listen_addresses = '192.168.0.70'
 ----
 
 And update the configuration to allow any host on the same subnet to access the database.
