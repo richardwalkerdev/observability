@@ -281,4 +281,14 @@ vi /etc/prometheus/targets/prometheus_targets.yml
   targets:
   - 192.168.0.71:9090
 ----
+
+Restart Prometheus:
+
+[source%nowrap,yaml]
+----
+systemctl restart prometheus
+----
+
+Everythong should be the same except now the configuration is decoupled from any instance of Prometheus. 
+
 // This is a comment and won't be rendered.
