@@ -145,4 +145,14 @@ firewall-cmd --add-port=9090/tcp --permanent
 firewall-cmd --reload
 ----
 
+A single Promethues instance can then be acceces using a browser for example: http://192.168.0.71:9090/. Assuming all these steps have been repeated on a second node (192.168.0.72), add a load balancer for these two Promethues instances using HAProxy.
+
+On the host serving HAProxy:
+
+[source%nowrap,bash]
+----
+
+----
+
+
 // This is a comment and won't be rendered.
