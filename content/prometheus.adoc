@@ -228,8 +228,8 @@ vi /etc/fstab
 
 [source%nowrap,bash]
 ----
-192.168.0.200:/nfs/targets /etc/prometheus/targets nfs rw,sync,hard,intr 0 0
-192.168.0.200:/nfs/rules /etc/prometheus/rules nfs rw,sync,hard,intr 0 0
+192.168.0.70:/nfs/targets /etc/prometheus/targets nfs rw,sync,hard,intr 0 0
+192.168.0.70:/nfs/rules /etc/prometheus/rules nfs rw,sync,hard,intr 0 0
 ----
 
 Ensure `nfs-utils` is installed:
