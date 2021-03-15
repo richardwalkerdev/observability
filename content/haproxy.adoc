@@ -68,7 +68,15 @@ listen stats
 # Add load balancers next
 ----
 
-This `haproxy.conf` example is the minimal configuration ready to add load balancers.
+This `haproxy.conf` example is the minimal configuration ready to add load balancers later.
+
+Open firewall:
+
+[source%nowrap,bash]
+----
+firewall-cmd --permanent --add-port=9000/tcp --zone=public
+firewall-cmd --reload
+----
 
 Enable and start HAProxy:
 
@@ -77,6 +85,6 @@ Enable and start HAProxy:
 systemctl enable haproxy.service --now
 ----
 
-View the graphical statistics report at http://192.168.0.101:9000/stats. In this example the username is `admin` and password is `changeme`. If you've pointed your local client to use `192.168.0.101` for its DNS, try http://lb.cluster.lab.com:9000/stats.
+View the graphical statistics report at http://192.168.0.70:9000/stats. In this example the username is `admin` and password is `changeme`. 
 
 // This is a comment and won't be rendered.
