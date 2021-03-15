@@ -301,4 +301,9 @@ Everything should be the same except now the configuration is decoupled from any
   - 192.168.0.71:9090
   - 192.168.0.72:9090
 ----
+
+### Recap
+
+Everything from this point on involves adding target scrape configurations and rules, specifically alert rules. All the other components are *peripheral* to Prometheus, either extending or handing off services, or consuming data for other purposes, as in the case of Grafana that using Promethues as a data source for displaying information in a graphical way. 
+
 // This is a comment and won't be rendered.
