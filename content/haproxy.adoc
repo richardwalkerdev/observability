@@ -4,14 +4,14 @@ Install HAProxy:
 
 [source%nowrap,bash]
 ----
-yum install haproxy -y
+dnf install haproxy -y
 ----
 
 Back up the original configuration file:
 
 [source%nowrap,bash]
 ----
-cp /etc/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg.bak
+mv /etc/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg.bak
 ----
 
 And add the following configuration (changing IPs for your environment)
