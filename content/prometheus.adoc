@@ -151,8 +151,32 @@ On the host serving HAProxy:
 
 [source%nowrap,bash]
 ----
-
+vi /etc/haproxy/haproxy.cfg
 ----
 
+[source%nowrap,bash]
+----
+# Prometheus LB
+frontend prometheus-lb-frontend
+    bind 192.168.0.70:9090
+    default_backend prometheus-lb-backend
+
+backend prometheus-lb-backend
+    balance roundrobin
+    server prometheus1 192.168.0.71:9090 check
+    server prometheus2 192.168.0.72:9090 check
+----
+
+And restart HAProxy plus checking the status:
+
+[source%nowrap,bash]
+----
+systemctl restart haproxy
+systemctl status haproxy
+----
+
+View the state of the load balancer using a browwser at http://192.168.0.70:9000/stats.
+
+View Prometheus via the load balancer using http://192.168.0.70:9090. 
 
 // This is a comment and won't be rendered.
