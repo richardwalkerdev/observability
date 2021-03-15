@@ -84,7 +84,15 @@ scrape_configs:
     - targets: ['0.0.0.0:9090']
 ----
 
-Note that the `scrape_configs` includes only this prometheus target at this stage. In other words a running instance of Promethues exposes metrics about itself. 
+Note that the `scrape_configs` includes only this prometheus target at this stage. In other words a running instance of Promethues exposes metrics about itself, when further instances are added they need to be included for example:
+
+[source%nowrap,yaml]
+----
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+    - targets: ['0.0.0.0:9090','192.168.0.72']
+----
 
 Create a service using `systemd`, adding `--web.listen-address=:9090`:
 
@@ -178,5 +186,26 @@ systemctl status haproxy
 View the state of the load balancer using a browwser at http://192.168.0.70:9000/stats.
 
 View Prometheus via the load balancer using http://192.168.0.70:9090. 
+
+### Basics
+
+A promethues instance exposes metrics about itself, for example http://192.168.0.71:9090/metrics and the only configuration include (at this stage) is itself.
+
+Look at Targets in a browser:
+
+<IMAGE>
+
+Execute a query:
+
+[source%nowrap,bash]
+----
+promhttp_metric_handler_requests_total{code="200"}
+----
+
+<IMAGE>
+
+And observer there are no alerts configured yet:
+
+<IMAGE>
 
 // This is a comment and won't be rendered.
