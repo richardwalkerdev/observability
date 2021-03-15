@@ -289,6 +289,16 @@ Restart Prometheus:
 systemctl restart prometheus
 ----
 
-Everythong should be the same except now the configuration is decoupled from any instance of Prometheus. 
+Everything should be the same except now the configuration is decoupled from any instance of Prometheus. When the second instance is added in this example `prometheus_targets.yml` should include both instacnes:
 
+[source%nowrap,yaml]
+----
+---
+- labels:
+    service: prometheus
+    env: staging
+  targets:
+  - 192.168.0.71:9090
+  - 192.168.0.72:9090
+----
 // This is a comment and won't be rendered.
