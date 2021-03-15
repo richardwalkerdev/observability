@@ -84,6 +84,8 @@ scrape_configs:
     - targets: ['0.0.0.0:9090']
 ----
 
+Note that the `scrape_configs` includes only this prometheus target at this stage. In other words a running instance of Promethues exposes metrics about itself. 
+
 Create a service using `systemd`, adding `--web.listen-address=:9090`:
 
 To reduce the time to begin archiving use minutes, example:
