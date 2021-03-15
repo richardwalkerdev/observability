@@ -208,4 +208,10 @@ And observer there are no alerts configured yet:
 
 <IMAGE>
 
+### Splitting out the configuration
+
+Remember to think of each instance of Prometheus as a Replica behind the load balancer, this mean any instance of Prometheus need the same configuration. Deploying this stack nativly on VMs or cloud instacnes (appose to using containers), the config directories might as well be mounted file systems. 
+
+
+
 // This is a comment and won't be rendered.
