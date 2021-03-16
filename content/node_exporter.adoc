@@ -1,5 +1,14 @@
 == node_exporter
 
+`node_exporter` is a Prometheus exporter for hardware and OS metrics exposed by UNIX and Linux kernels. Think of it as a machine agent that exposes meters at the host level, for things such as CPU, Disk usage and memory etc.
+
+In this guide, there are initially three VMs, utilities, mon1 and mon2, these steps for installing `node_exporter` are repeated on any node required to be monitored.
+
+This high level diagram summarises to architecture. node_exporter is deployed on nodes and the included in the Prometheus scrape targets config. Any number of these node_experter endpoints can be added to monitor infrastructure hosts. In this case, the nodes hosting Prometheus are included. The second Prometheus instance and other nodes are greyed out in the diagram, remember the second instance is a replica of the first.
+
+image::images/node_exporter.png[node_exporter]
+
+=== Deploy node_exporter
 
 [source%nowrap,bash]
 ----
@@ -59,6 +68,14 @@ ExecStart=/usr/local/bin/node_exporter \
 WantedBy=multi-user.target
 ----
 
+Open firewall port:
+
+[source%nowrap,bash]
+----
+firewall-cmd --add-port=9100/tcp --permanent
+firewall-cmd --reload
+----
+
 Start and enable the Node Exporter:
 
 [source%nowrap,bash]
@@ -68,30 +85,37 @@ systemctl enable node_exporter --now
 systemctl status node_exporter
 ----
 
-Add Node Exporter to Prometheus scrape, include labe to identify individual nodes for example `pnode1` and `pnode2`:
+
+=== Update Targets
+
+Add node_exporter to Prometheus scrape, include labels to identify the services. In this example nodes `mon1 -  192.168.0.71`, `mon2 -  192.168.0.72` and `utilities -  192.168.0.70` are added. Because this config is mounted by any Prometheus instance, the config is the same. This example includes three nodes:
 
 [source%nowrap,bash]
 ----
-vi /etc/prometheus/prometheus.yml
+vi /etc/prometheus/targets/node_exporter.yml
 ----
 
 [source%nowrap,yaml]
 ----
-scrape_configs:
-  - job_name: 'prometheus'
-    static_configs:
-    - targets: ['0.0.0.0:9090']
-  - job_name: 'node_exporter'
-    static_configs:
-    - targets: ['0.0.0.0:9100']
-      labels:
-        node: pnode1
+---
+- labels:
+    service: node_exporter
+    env: staging
+  targets:
+  - 192.168.0.70:9100
+  - 192.168.0.71:9100
+  - 192.168.0.72:9100
 ----
+
+Prometheus needs to be restarted on both Prometheus instances:
 
 [source%nowrap,yaml]
 ----
 systemctl restart prometheus
 ----
 
+At this stage, there are two prometheus targets and three node_exporter targets:
+
+image::images/node_targets.png[Targets]
 
 // This is a comment and won't be rendered.

@@ -1,5 +1,76 @@
 == Alertmanager
 
+Before deploying Alert Manager, alert rules can be added to Prometheus and fully tested. Alert will fully work and fire in Prometheus. All Alert Manager does is hook into Prometheus and handles the actual sending alert messages to what ever providers are configured such as email, and it takes care of de-duplication. For example, where two alert managers are in the equation, you don't want both sending out an email for the same alert.
+
+=== Rules
+
+Consider the query `node_filesystem_size_bytes{mountpoint="/boot"}`, executing this in Prometheus should return each `/boot` file system for each of the nodes where metrics are scraped using `node_exporter`.
+
+All an alert is, it such a query with an added condition.
+
+[source%nowrap]
+----
+node_filesystem_size_bytes{mountpoint="/boot"} > 1000000000
+----
+
+image::images/alerts-1.png[Alert Rules]
+
+In this case, increasing the number to where no condition is matched returns no results.
+
+[source%nowrap]
+----
+node_filesystem_size_bytes{mountpoint="/boot"} > 2000000000
+----
+
+image::images/alerts-2.png[Alert Rules]
+
+By working with Prometheus directly and tuning expressions and conditions is the best way of deriving alerts expressions.
+
+To add an alert, create rules files under `/etc/prometheus/rules/`. These files can contain multiple alerts.
+
+Example:
+
+[source%nowrap]
+----
+vi /etc/prometheus/rules/boot_fs.yml
+----
+
+
+[source%nowrap,yaml]
+----
+groups:
+- name: node_exporter
+  rules:
+    - alert: boot_partition
+      expr: node_filesystem_size_bytes{mountpoint="/boot"} > 1000000000
+      for: 1m
+      labels:
+        severity: warning
+      annotations:
+        title: Disk space filling up
+        description: /boot is filling up
+----
+
+Restart each Prometheus instance `systemctl restart prometheus`.
+
+That is fundamentally all there is to alerts, in this example all three nodes will start firing:
+
+image::images/alerts-3.png[Alert Rules]
+
+Edit the alert and tweak the threshold to `expr: node_filesystem_size_bytes{mountpoint="/boot"} > 2000000000` and restart Prometheus again, the alert with turn green:
+
+image::images/alerts-4.png[Alert Rules]
+
+However, while this is functionally working, its not all too useful if you have to manually check the alerts in Prometheus. This is where Alert Manager comes into the equation.
+
+=== Deploy Alert Manager
+
+Two instances of alert manager are deployed, one on each node, each instance of alert manager needs to know about the other so they can "gossip" and know if who has sent what and avoid duplicate alerts been sent out.
+
+Prometheus configuration is also updated to include the Alert Manager instances so it can off load the responsibility of dealing with what to do with them.
+
+image::images/alert_manager.png[Alert Rules]
+
 Add a service user account:
 
 [source%nowrap,bash]
@@ -35,12 +106,14 @@ Copy the `alertmanager` binary to a suitable path:
 cp alertmanager /usr/local/bin/
 ----
 
-Change the ownership of `alertmanager`:
+// Change the ownership of `alertmanager`:
 
-[source%nowrap,bash]
-----
-chown alertmanager:alertmanager /usr/local/bin/alertmanager
-----
+// [source%nowrap,bash]
+// ----
+// chown alertmanager:alertmanager /usr/local/bin/alertmanager
+// ----
+
+Add the following configuration, you can use a regular Gmail account for SMTP, although it might be necessary to create app credentials, and add what receiver email address desired.
 
 [source%nowrap,bash]
 ----
@@ -51,8 +124,8 @@ vi /etc/alertmanager/alertmanager.yml
 [source%nowrap,yaml]
 ----
 global:
-  smtp_smarthost: 'smtp.example.net:587'
-  smtp_from: 'AlertManager <mailer@example.com>'
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'AlertManager <mailer@lab.com>'
   smtp_require_tls: true
   smtp_hello: 'alertmanager'
   smtp_auth_username: 'username'
@@ -71,7 +144,15 @@ receivers:
       - to: 'user@example.com'
 ----
 
-Create a service for `alertmanager` using `systemd`, example includes a custom port `5100`:
+Change permissions:
+
+[source%nowrap,yaml]
+----
+chown -R alertmanager:alertmanager /etc/alertmanager
+----
+
+
+Create a service for `alertmanager` using `systemd`, example includes the `cluster.peer`:
 
 [source%nowrap,bash]
 ----
@@ -89,16 +170,71 @@ After=network-online.target
 User=alertmanager
 Group=alertmanager
 Type=simple
+LimitNOFILE=65536
 ExecStart=/usr/local/bin/alertmanager \
+    --cluster.listen-address=0.0.0.0:9004 \
+    --cluster.peer=192.168.0.72:9004 \
     --config.file=/etc/alertmanager/alertmanager.yml \
-    --web.external-url http://192.168.0.200:9093
+    --web.external-url=http://192.168.0.71:9093
+
 WorkingDirectory=/etc/alertmanager
 
 [Install]
 WantedBy=multi-user.target
 ----
 
-Start and enable the Alertmanager:
+NOTE: the second Alert Manager instance needs to point to the other peer `--cluster.peer=192.168.0.71:9004` and its own IP for `--web.external-url=http://192.168.0.72:9093`
+
+
+Make a directory to mount the `alertmanagers.yml` config file:
+
+[source%nowrap,bash]
+----
+mkdir /etc/prometheus/alertmanagers
+----
+
+Add the NFS mount point:
+
+[source%nowrap,bash]
+----
+vi /etc/fstab
+----
+
+[source%nowrap,bash]
+----
+192.168.0.70:/nfs/alertmanagers /etc/prometheus/alertmanagers nfs rw,sync,hard,intr 0 0
+----
+
+[source%nowrap,bash]
+----
+mount -a
+----
+
+Add `alertmanagers.yml`:
+
+[source%nowrap,bash]
+----
+vi /etc/prometheus/alertmanagers/alertmanagers.yml
+----
+
+[source%nowrap,yaml]
+----
+---
+- targets:
+  - 192.168.0.71:9093
+  - 192.168.0.72:9093
+----
+
+Open firewall:
+
+[source%nowrap,bash]
+----
+firewall-cmd --add-port=9093/tcp --permanent
+firewall-cmd --add-port=9004/tcp --permanent
+firewall-cmd --reload
+----
+
+Start and enable the Alert Manager:
 
 [source%nowrap,bash]
 ----
@@ -118,16 +254,62 @@ vi /etc/prometheus/prometheus.yml
 alerting:
   alertmanagers:
   - static_configs:
-    - targets:
-      - localhost:9093
+    file_sd_configs:
+    - files:
+      - 'alertmanagers/alertmanagers.yml'
 ----
 
 And restart Prometheus:
 
+[source%nowrap,bash]
 ----
 systemctl enable prometheus.service
 ----
 
-With this configured, go back to Prometheus to configure some alerts. Alerts will only appear in Alertmanager if they fire.
+With this configured, go back to Prometheus to configure some alerts. Alerts will only appear in Alert Manager if they fire.
+
+Check the status of each alert manager for example http://192.168.0.71:9093 and http://192.168.0.72:9093
+
+image::images/alert-status.png[Alert Rules]
+
+This two Alert Manager instances can be added as a load balancer, on the host serving HAProxy:
+
+[source%nowrap,bash]
+----
+vi /etc/haproxy/haproxy.cfg
+----
+
+[source%nowrap,bash]
+----
+# Alert Manager LB
+frontend alertmanager-lb-frontend
+    bind 192.168.0.70:9090
+    default_backend alertmanager-lb-backend
+
+backend alertmanager-lb-backend
+    balance roundrobin
+    server alertmanager1 192.168.0.71:9093 check
+    server alertmanager2 192.168.0.72:9093 check
+----
+
+And restart HAProxy plus checking the status:
+
+[source%nowrap,bash]
+----
+systemctl restart haproxy
+systemctl status haproxy
+----
+
+Open firewall on HAProxy host too:
+
+[source%nowrap,bash]
+----
+firewall-cmd --add-port=9093/tcp --permanent
+firewall-cmd --reload
+----
+
+Experiment by changing the condition and causing an alert to fire `vi /etc/prometheus/rules/boot_fs.yml` (remember to restart prometheus on both nodes)
+
+image::images/alerts-5.png[Alert Rules]
 
 // This is a comment and won't be rendered.

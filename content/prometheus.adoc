@@ -84,7 +84,7 @@ scrape_configs:
     - targets: ['0.0.0.0:9090']
 ----
 
-Note that the `scrape_configs` includes only this prometheus target at this stage. In other words a running instance of Promethues exposes metrics about itself, when further instances are added they need to be included for example:
+Note that the `scrape_configs` includes only this prometheus target at this stage. In other words a running instance of Prometheus exposes metrics about itself, when further instances are added they need to be included for example:
 
 [source%nowrap,yaml]
 ----
@@ -153,7 +153,7 @@ firewall-cmd --add-port=9090/tcp --permanent
 firewall-cmd --reload
 ----
 
-A single Promethues instance can then be acceces using a browser for example: http://192.168.0.71:9090/. Assuming all these steps have been repeated on a second node (192.168.0.72), add a load balancer for these two Promethues instances using HAProxy.
+A single Prometheus instance can then be access using a browser for example: http://192.168.0.71:9090/. Assuming all these steps have been repeated on a second node (192.168.0.72), add a load balancer for these two Prometheus instances using HAProxy.
 
 On the host serving HAProxy:
 
@@ -183,17 +183,25 @@ systemctl restart haproxy
 systemctl status haproxy
 ----
 
-View the state of the load balancer using a browwser at http://192.168.0.70:9000/stats.
+Open firewall on HAProxy host too:
 
-View Prometheus via the load balancer using http://192.168.0.70:9090. 
+[source%nowrap,bash]
+----
+firewall-cmd --add-port=9090/tcp --permanent
+firewall-cmd --reload
+----
 
-### Basics
+View the state of the load balancer using a browser at http://192.168.0.70:9000/stats.
 
-A promethues instance exposes metrics about itself, for example http://192.168.0.71:9090/metrics and the only configuration include (at this stage) is itself.
+View Prometheus via the load balancer using http://192.168.0.70:9090/.
+
+=== Basics
+
+A prometheus instance exposes metrics about itself, for example http://192.168.0.71:9090/metrics and the only target configuration included (at this stage) is itself.
 
 Look at Targets in a browser:
 
-<IMAGE>
+image::images/prom-1.png[Prometheus]
 
 Execute a query:
 
@@ -202,15 +210,15 @@ Execute a query:
 promhttp_metric_handler_requests_total{code="200"}
 ----
 
-<IMAGE>
+image::images/prom-3.png[Prometheus]
 
-And observer there are no alerts configured yet:
+And observe there are no alerts configured yet:
 
-<IMAGE>
+image::images/prom-2.png[Prometheus]
 
-### Splitting out the configuration
+=== Decouple config
 
-Remember to think of each instance of Prometheus as a Replica behind the load balancer, this mean any instance of Prometheus need the same configuration. Deploying this stack nativly on VMs or cloud instacnes (appose to using containers), the config directories might as well be mounted file systems. 
+Remember to think of each instance of Prometheus as a Replica behind the load balancer, this mean any instance of Prometheus need the same configuration. Deploying this stack natively on VMs or cloud instances (oppose to using containers), the config directories might as well be mounted file systems.
 
 Make two directories for the target config and rules:
 
@@ -265,11 +273,11 @@ rule_files:
   - /etc/prometheus/rules/*.yml
 ----
 
-And add the Promethues target/s:
+And add the Prometheus target/s:
 
 [source%nowrap,bash]
 ----
-vi /etc/prometheus/targets/prometheus_targets.yml 
+vi /etc/prometheus/targets/prometheus_targets.yml
 ----
 
 [source%nowrap,yaml]
@@ -289,7 +297,7 @@ Restart Prometheus:
 systemctl restart prometheus
 ----
 
-Everything should be the same except now the configuration is decoupled from any instance of Prometheus. When the second instance is added in this example `prometheus_targets.yml` should include both instacnes:
+Everything should be the same except now the configuration is decoupled from any instance of Prometheus. When the second instance is added in this example `prometheus_targets.yml` should include both instances:
 
 [source%nowrap,yaml]
 ----
@@ -302,8 +310,20 @@ Everything should be the same except now the configuration is decoupled from any
   - 192.168.0.72:9090
 ----
 
-### Recap
+=== Chronyd
 
-Everything from this point on involves adding target scrape configurations and rules, specifically alert rules. All the other components are *peripheral* to Prometheus, either extending or handing off services, or consuming data for other purposes, as in the case of Grafana that using Promethues as a data source for displaying information in a graphical way. 
+It's a good idea to make sure all servers and clients are in sync with their clocks, for reference:
+
+[source%nowrap,yaml]
+----
+dnf install chrony
+systemctl start chronyd
+systemctl enable chronyd
+chronyc tracking
+----
+
+=== Recap
+
+Everything from this point on involves adding target scrape configurations and rules, specifically alert rules for Prometheus. All the other components are *peripheral* to Prometheus, either extending or handing off services, or consuming data for other purposes, as in the case of Grafana that using Prometheus as a data source for displaying information in a graphical way.
 
 // This is a comment and won't be rendered.

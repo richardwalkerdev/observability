@@ -18,6 +18,7 @@ include::content/postgresql.adoc[]
 include::content/haproxy.adoc[]
 
 include::content/prometheus.adoc[]
+include::content/node_exporter.adoc[]
 include::content/alertmanager.adoc[]
 include::content/thanos.adoc[]
 include::content/grafana.adoc[]
