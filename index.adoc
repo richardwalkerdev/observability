@@ -11,8 +11,9 @@ Richard Walker <me@richardwalker.dev>
 :coderay-linenums-mode: inline
 :coderay-css: class
 
-include::content/introduction.adoc[]
+== Monitoring
 
+include::content/introduction.adoc[]
 include::content/nfs.adoc[]
 include::content/postgresql.adoc[]
 include::content/haproxy.adoc[]
@@ -22,6 +23,9 @@ include::content/node_exporter.adoc[]
 include::content/alertmanager.adoc[]
 include::content/thanos.adoc[]
 include::content/grafana.adoc[]
+include::content/ansible.adoc[]
+
+== Logging
 
 include::content/efk.adoc[]
 include::content/loki.adoc[]

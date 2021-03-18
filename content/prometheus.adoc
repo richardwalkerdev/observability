@@ -1,4 +1,4 @@
-== Prometheus
+=== Prometheus
 
 Prometheus is a free software application used for event monitoring and alerting. It records real-time metrics in a time series database (allowing for high dimensionality) built using a HTTP pull model, with flexible queries and real-time alerting. The project is written in Go and licensed under the Apache 2 License.
 
@@ -195,7 +195,7 @@ View the state of the load balancer using a browser at http://192.168.0.70:9000/
 
 View Prometheus via the load balancer using http://192.168.0.70:9090/.
 
-=== Basics
+==== Basics
 
 A prometheus instance exposes metrics about itself, for example http://192.168.0.71:9090/metrics and the only target configuration included (at this stage) is itself.
 
@@ -310,7 +310,7 @@ Everything should be the same except now the configuration is decoupled from any
   - 192.168.0.72:9090
 ----
 
-=== Chronyd
+==== Chronyd
 
 It's a good idea to make sure all servers and clients are in sync with their clocks, for reference:
 
@@ -322,7 +322,7 @@ systemctl enable chronyd
 chronyc tracking
 ----
 
-=== Recap
+==== Recap
 
 Everything from this point on involves adding target scrape configurations and rules, specifically alert rules for Prometheus. All the other components are *peripheral* to Prometheus, either extending or handing off services, or consuming data for other purposes, as in the case of Grafana that using Prometheus as a data source for displaying information in a graphical way.
 

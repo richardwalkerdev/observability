@@ -2,5 +2,214 @@
 
 It obvious that all this manual implementation is not very practical, and sure, there are Ansible Roles available on Ansible Galaxy to deploy most of this stuff. That said, understanding the requirements close up and personally paves the way to automate this yourself.
 
+=== Quick Install
+
+Create a new working directory:
+
+[source%nowrap,bash]
+----
+mkdir tower && cd tower
+----
+
+Create a new Python 3 Virtual Environment:
+
+[source%nowrap,bash]
+----
+python3 -m venv venv
+----
+
+Activate the Python environment:
+
+[source%nowrap,bash]
+----
+source venv/bin/activate
+----
+
+Make sure `pip` is updated:
+
+[source%nowrap,bash]
+----
+pip install --upgrade pip
+----
+
+Install Ansible:
+
+[source%nowrap,bash]
+----
+pip install ansible
+----
+
+Make the directory skeleton:
+
+[source%nowrap,bash]
+----
+mkdir -p inventories/lab playbooks/lab roles
+----
+
+Add the IP Address of any host needed to be managed by Ansible, in this case in the `lab` inventory:
+
+[source%nowrap,bash]
+----
+vi inventories/lab/hosts
+----
+
+[source%nowrap,bash]
+----
+192.168.0.70
+192.168.0.71
+192.168.0.72
+----
+
+Add an `ansible.cfg` file in the `playbooks/lab` directory:
+
+[source%nowrap,bash]
+----
+vi playbooks/lab/ansible.cfg
+----
+
+[source%nowrap,bash]
+----
+[defaults]
+inventory = ../../inventories/lab
+roles_path = ../../roles
+host_key_checking = False
+retry_files_enabled = False
+command_warnings = False
+remote_user = root
+----
+
+To use another user and become root, it helps in `/etc/sudoers` to allow `sudo` with no password:
+
+[source%nowrap,bash]
+----
+visudo
+----
+
+[source%nowrap,bash]
+----
+## Allows people in group wheel to run all commands
+#%wheel	ALL=(ALL)	ALL
+
+## Same thing without a password
+%wheel	ALL=(ALL)	NOPASSWD: ALL
+----
+
+User a user called `ansible` the `ansible.cfg` would look like this:
+
+[source%nowrap,bash]
+----
+[defaults]
+inventory = ../../inventories/lab
+roles_path = ../../roles
+host_key_checking = False
+retry_files_enabled = False
+command_warnings = False
+remote_user = ansible
+----
+
+And that user on remote hosts needs to be a member of the `wheel` group:
+
+[source%nowrap,bash]
+----
+usermod -aG whell ansible
+----
+
+Create a basic smoke test role:
+
+[source%nowrap,bash]
+----
+mkdir -p roles/smoke_test/tasks roles/smoke_test/defaults
+----
+
+Add a default variable:
+
+[source%nowrap,bash]
+----
+vi roles/smoke_test/defaults/main.yml
+----
+
+[source%nowrap,yaml]
+----
+---
+message: 'Hello World!'
+----
+
+Add a basic task to the role:
+
+[source%nowrap,bash]
+----
+vi roles/smoke_test/tasks/main.yml
+----
+
+[source%nowrap,yaml]
+----
+---
+- name: Smoke test
+  shell: echo "{{ message }}" > /tmp/smoke_test.yml
+----
+
+Add a playbook for the smoke test:
+
+[source%nowrap,bash]
+----
+vi playbooks/lab/smoke_test.yml
+----
+
+[source%nowrap,yaml]
+----
+---
+- name: Smoke Test Playbook
+  hosts: 192.168.0.177
+  remote_user: root
+  roles:
+    - smoke_test
+----
+
+Or if using a regular user account, in this case `ansible`:
+
+[source%nowrap,yaml]
+----
+---
+- name: Smoke Test Playbook
+  hosts: 192.168.0.177
+  become: yes
+  roles:
+    - smoke_test
+----
+
+Move into the `playbooks/lab/` directory:
+
+[source%nowrap,bash]
+----
+cd playbooks/lab/
+----
+
+Copy your ID to the target server/s:
+
+[source%nowrap,bash]
+----
+ssh-copy-id root@192.168.0.177
+----
+
+Or if using a regular user, in this example `ansible`:
+
+[source%nowrap,bash]
+----
+ssh-copy-id ansible@192.168.0.177
+----
+
+Run the smoke test playbook:
+
+[source%nowrap,bash]
+----
+ansible-playbook smoke_test.yml
+----
+
+=== Working with Facts
+
+[source%nowrap,bash]
+----
+ansible all -m setup -a "filter=ansible_distribution*
+----
 
 // This is a comment and won't be rendered.

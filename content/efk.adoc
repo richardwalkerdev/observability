@@ -1,4 +1,4 @@
-== EFK
+=== EFK
 
 *Elasticsearch, Fluentd and Kibana*
 
@@ -44,7 +44,7 @@ systemctl stop firewalld
 systemctl disable firewalld
 ----
 
-*Elasticsearch*
+==== Elasticsearch
 
 Add the Elasticsearch repository:
 
@@ -114,7 +114,7 @@ Start and enable the service:
 systemctl enable elasticsearch.service --now
 ----
 
-*Kibana*
+==== Kibana
 
 Install Kibana:
 
@@ -147,7 +147,7 @@ Start and enable Kibana:
 systemctl enable kibana.service --now
 ----
 
-*NGINX*
+==== NGINX
 
 Install NGINX:
 

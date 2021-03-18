@@ -1,8 +1,8 @@
-== Alertmanager
+=== Alertmanager
 
 Before deploying Alert Manager, alert rules can be added to Prometheus and fully tested. Alert will fully work and fire in Prometheus. All Alert Manager does is hook into Prometheus and handles the actual sending alert messages to what ever providers are configured such as email, and it takes care of de-duplication. For example, where two alert managers are in the equation, you don't want both sending out an email for the same alert.
 
-=== Rules
+==== Rules
 
 Consider the query `node_filesystem_size_bytes{mountpoint="/boot"}`, executing this in Prometheus should return each `/boot` file system for each of the nodes where metrics are scraped using `node_exporter`.
 
@@ -63,7 +63,7 @@ image::images/alerts-4.png[Alert Rules]
 
 However, while this is functionally working, its not all too useful if you have to manually check the alerts in Prometheus. This is where Alert Manager comes into the equation.
 
-=== Deploy Alert Manager
+==== Deploy Alert Manager
 
 Two instances of alert manager are deployed, one on each node, each instance of alert manager needs to know about the other so they can "gossip" and know if who has sent what and avoid duplicate alerts been sent out.
 
@@ -272,7 +272,7 @@ Check the status of each alert manager for example http://192.168.0.71:9093 and 
 
 image::images/alert-status.png[Alert Rules]
 
-This two Alert Manager instances can be added as a load balancer, on the host serving HAProxy:
+These two Alert Manager instances can be added as a load balancer, on the host serving HAProxy:
 
 [source%nowrap,bash]
 ----

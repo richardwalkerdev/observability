@@ -1,4 +1,4 @@
-== PostgreSQL
+=== PostgreSQL
 
 PostgreSQL is a powerful, open-source object-relational database system that has earned a strong reputation for reliability, feature robustness, and performance.
 

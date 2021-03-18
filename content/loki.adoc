@@ -1,10 +1,10 @@
-== Grafana Loki
+=== Grafana Loki
 
 
-=== Loki
+==== Loki
 
 
-=== Promtail
+==== Promtail
 
 
 // This is a comment and won't be rendered.

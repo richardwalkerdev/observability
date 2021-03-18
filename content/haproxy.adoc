@@ -1,4 +1,4 @@
-== HAProxy
+=== HAProxy
 
 Install HAProxy:
 
@@ -92,7 +92,7 @@ Enable and start HAProxy:
 systemctl enable haproxy.service --now
 ----
 
-View the graphical statistics report at http://192.168.0.70:9000/stats. In this example the username is `admin` and password is `changeme`. 
+View the graphical statistics report at http://192.168.0.70:9000/stats. In this example the username is `admin` and password is `changeme`.
 
 This should be all set for adding load balancers.
 

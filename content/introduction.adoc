@@ -1,8 +1,8 @@
-== Introduction
+=== Introduction
 
 Why bother doing all this in a traditional native sense? There are use cases, maybe for smaller environments. In the conclusion to this guide, I evaluate the value of spending time on managing such a stack more manually versus deploying the stack on a container platform. However, for getting to grips with all the moving parts of this monitoring and alerting stack, do it all by hand is the best way to learn and understand the pros and cons.
 
-== Native Overview
+=== Native Overview
 
 At a high level, this is the final objective, it might look complex at first glance but the target is a pair of each core component for high availability and connectivity relationships.
 

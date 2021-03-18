@@ -1,4 +1,4 @@
-== OpenShift
+=== OpenShift
 
 Time to deploy these stacks on OpenShift.
 

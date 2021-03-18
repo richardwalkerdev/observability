@@ -1,4 +1,4 @@
-== node_exporter
+=== node_exporter
 
 `node_exporter` is a Prometheus exporter for hardware and OS metrics exposed by UNIX and Linux kernels. Think of it as a machine agent that exposes meters at the host level, for things such as CPU, Disk usage and memory etc.
 
@@ -8,7 +8,7 @@ This high level diagram summarises to architecture. node_exporter is deployed on
 
 image::images/node_exporter.png[node_exporter]
 
-=== Deploy node_exporter
+==== Deploy node_exporter
 
 [source%nowrap,bash]
 ----
@@ -86,7 +86,7 @@ systemctl status node_exporter
 ----
 
 
-=== Update Targets
+==== Update Targets
 
 Add node_exporter to Prometheus scrape, include labels to identify the services. In this example nodes `mon1 -  192.168.0.71`, `mon2 -  192.168.0.72` and `utilities -  192.168.0.70` are added. Because this config is mounted by any Prometheus instance, the config is the same. This example includes three nodes:
 

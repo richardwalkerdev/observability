@@ -1,10 +1,19 @@
-== Thanos
+=== Thanos
+
+Thanos includes quite a few components, in this section three core ones are covered for achieving high availability and mainly long term storage for historic Prometheus metrics retention.
+
+For lab work and testing NFS storage is used.
 
 IMPORTANT: NFS is typically NOT recommended for real environments, See https://thanos.io/tip/thanos/storage.md/ for configuring access to object storage and the supported clients.
 
-=== Thanos Sidecar
+image::images/thanos_simple.png[Thanos]
 
-Get the latest release link from https://github.com/thanos-io/thanos/releases/:
+
+==== Thanos Binary
+
+The same Thanos binary is used for launching the Sidecar, Store and Query components.
+
+Get the latest release link from https://github.com/thanos-io/thanos/releases/ and download it:
 
 [source%nowrap,bash]
 ----
@@ -38,7 +47,11 @@ thanos, version 0.18.0 (branch: HEAD, revision: 60d45a02d46858a38013283b578017a1
   platform:         linux/amd64
 ----
 
-Create a configuration directory for Thanos and a directory to use for mounting the NFS share for storing Prometheus data:
+==== Thanos Sidecar
+
+Starting with the Thanos Sidecar, create a configuration directory for Thanos and a directory to use for mounting the NFS share for storing Prometheus data.
+
+Note: both the Sidecar and Store components use the `objstore.config-file` which references the mount point.
 
 [source%nowrap,bash]
 ----
@@ -52,7 +65,7 @@ Check NFS share is visable from host:
 ----
 dnf install nfs-utils -y
 
-showmount -e 192.168.0.200
+showmount -e 192.168.0.70
 ----
 
 Mount the NFS share:
@@ -64,7 +77,7 @@ vi /etc/fstab
 
 [source%nowrap,bash]
 ----
-192.168.0.200:/nfs/thanos /thanos               nfs     defaults        0 0
+192.168.0.70:/nfs/thanos /thanos               nfs     defaults        0 0
 ----
 
 [source%nowrap,bash]
@@ -130,7 +143,16 @@ systemctl enable thanos_sidecar --now
 systemctl status thanos_sidecar
 ----
 
-=== Thanos Store
+Open firewall:
+
+[source%nowrap,bash]
+----
+firewall-cmd --add-port=10901/tcp --permanent
+firewall-cmd --add-port=10902/tcp --permanent
+firewall-cmd --reload
+----
+
+==== Thanos Store
 
 [source%nowrap,bash]
 ----
@@ -168,9 +190,18 @@ systemctl enable thanos_store --now
 systemctl status thanos_store
 ----
 
-=== Thanos Query
+Open firewall:
 
-Create a service for Thanos Query using `systemd`, note the two `store` arguments, one for the Thanos Store and one for the Thanos Sidecar.
+[source%nowrap,bash]
+----
+firewall-cmd --add-port=10905/tcp --permanent
+firewall-cmd --add-port=10906/tcp --permanent
+firewall-cmd --reload
+----
+
+==== Thanos Query
+
+Create a service for Thanos Query using `systemd`, note the `store` arguments, port 10905 is the Thanos Store for each instance and 10901 is the Thanos Sidecar for both instances.
 
 [source%nowrap,bash]
 ----
@@ -188,11 +219,14 @@ After=network-online.target
 User=prometheus
 Group=prometheus
 Type=simple
+LimitNOFILE=65536
 ExecStart=/usr/local/bin/thanos query \
+    --store=192.168.0.71:10905 \
+    --store=192.168.0.72:10905 \
+    --store=192.168.0.71:10901 \
+    --store=192.168.0.72:10901 \
     --http-address=0.0.0.0:10904 \
-    --grpc-address=0.0.0.0:10903 \
-    --store=0.0.0.0:10901 \
-    --store=0.0.0.0:10905
+    --grpc-address=0.0.0.0:10903
 
 [Install]
 WantedBy=multi-user.target
@@ -206,6 +240,59 @@ systemctl daemon-reload
 systemctl enable thanos_query --now
 systemctl status thanos_query
 ----
+
+Open the firewall:
+
+[source%nowrap,bash]
+----
+firewall-cmd --add-port=10904/tcp --permanent
+firewall-cmd --reload
+----
+
+You should now be able to hit single instances directly, for example http://192.168.0.71:10904 and look at the stores, the following is with one node configured with the three Thanos components:
+
+image::images/thanos-1.png[Thanos]
+
+And now with the second node and second instances of the Thanos components:
+
+
+image::images/thanos-2.png[Thanos]
+
+You can use the Thanos Query to execute queries just like in Prometheus, the metrics are fed in directly from Prometheus and the Thanos Store.
+
+image::images/thanos-3.png[Thanos]
+
+Do a directory listing `ls -al /thanos` to see Prometheus data being written.
+
+These two Thanos Query instances can be added as a load balancer, on the host serving HAProxy:
+
+[source%nowrap,bash]
+----
+vi /etc/haproxy/haproxy.cfg
+----
+
+[source%nowrap,bash]
+----
+# Thanos Query LB
+frontend thanos-query-lb-frontend
+    bind 192.168.0.70:10904
+    default_backend thanos-query-lb-backend
+
+backend thanos-query-lb-backend
+    balance roundrobin
+    server thanos-query1 192.168.0.71:10904 check
+    server thanos-query2 192.168.0.72:10904 check
+----
+
+And restart HAProxy plus checking the status:
+
+[source%nowrap,bash]
+----
+systemctl restart haproxy
+systemctl status haproxy
+----
+
+Open firewall on HAProxy host too:
 
 [source%nowrap,bash]
 ----
