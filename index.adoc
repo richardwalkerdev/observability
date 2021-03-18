@@ -30,6 +30,8 @@ include::content/ansible.adoc[]
 include::content/efk.adoc[]
 include::content/loki.adoc[]
 
+== OpenShift
+
 include::content/openshift.adoc[]
 
 include::content/conclusion.adoc[]

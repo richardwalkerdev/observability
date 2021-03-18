@@ -263,7 +263,7 @@ And restart Prometheus:
 
 [source%nowrap,bash]
 ----
-systemctl enable prometheus.service
+systemctl restart prometheus.service
 ----
 
 With this configured, go back to Prometheus to configure some alerts. Alerts will only appear in Alert Manager if they fire.
@@ -283,7 +283,7 @@ vi /etc/haproxy/haproxy.cfg
 ----
 # Alert Manager LB
 frontend alertmanager-lb-frontend
-    bind 192.168.0.70:9090
+    bind 192.168.0.70:9093
     default_backend alertmanager-lb-backend
 
 backend alertmanager-lb-backend

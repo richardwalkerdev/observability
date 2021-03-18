@@ -258,7 +258,7 @@ And now with the second node and second instances of the Thanos components:
 
 image::images/thanos-2.png[Thanos]
 
-You can use the Thanos Query to execute queries just like in Prometheus, the metrics are fed in directly from Prometheus and the Thanos Store.
+You can use the Thanos Query to execute queries just like in Prometheus, the metrics are fed in directly from Prometheus via the Thanos Sidecar and the Thanos Store.
 
 image::images/thanos-3.png[Thanos]
 

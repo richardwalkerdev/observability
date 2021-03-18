@@ -1,5 +1,11 @@
 === Grafana
 
+Grafana is a popular technology used to compose observability dashboards in this case using Prometheus metrics, and later also logs using Loki and promtail.
+
+It's very simple to deploy, and as default it uses a local SQLite database for single instances, the only step necessary to achieve high availability is configure the database settings for any number of Grafana instance to a shared database such as PostgresSQL.
+
+Add the Grafana repository:
+
 [source%nowrap,bash]
 ----
 vi /etc/yum.repos.d/grafana.repo
@@ -20,38 +26,135 @@ sslverify=1
 sslcacert=/etc/pki/tls/certs/ca-bundle.crt
 ----
 
+And install Grafana:
+
 [source%nowrap,bash]
 ----
 dnf install grafana -y
 ----
 
-Start and enable Grafana:
-
-[source%nowrap,bash]
-----
-systemctl daemon-reload
-systemctl start grafana-server
-systemctl status grafana-server
-systemctl enable grafana-server
-----
-
-Configure alternative network port:
+For a single instance just start the service and go. In this case for a HA pair, update `grafana.ini` with the PostgreSQL database settings, as defined at the start of this page. Search for "database" in the `ini` file and add the following settings:
 
 [source%nowrap,bash]
 ----
 vi /etc/grafana/grafana.ini
 ----
 
-Example:
+[source%nowrap,bash]
+----
+type = postgres
+host = 192.168.0.70:5432
+name = grafana_db
+user = grafana
+password = changeme
+----
+
+Optionally, you can change the http port the service listens on:
 
 [source%nowrap,bash]
 ----
 # The http port  to use
-http_port = 3030
+http_port = 3000
 ----
 
-Grafana will be up can running, for example http://localhost:3030. Log in with username `admin` and password `admin`. A password change is mandated on first login.
+Open firewall:
+
+[source%nowrap,bash]
+----
+firewall-cmd --add-port=3000/tcp --permanent
+firewall-cmd --reload
+----
 
 
+Start and enable Grafana:
+
+[source%nowrap,bash]
+----
+systemctl daemon-reload
+systemctl enable  grafana-server --now
+systemctl status grafana-server
+----
+
+
+Grafana will be up and running, for example http://192.168.0.71:3000/. Log in with username `admin` and password `admin`. A password change is mandated on first login.
+
+Repeating the steps on the second node will behave like like the first since there attached to the same database, log in with `admin` and the new password you set during the first install http://192.168.0.72:3000/.
+
+Add the HAProxy load balancer:
+
+[source%nowrap,bash]
+----
+vi /etc/haproxy/haproxy.cfg
+----
+
+[source%nowrap,bash]
+----
+# Grafana LB
+frontend grafana-lb-frontend
+    bind 192.168.0.70:3000
+    default_backend grafana-lb-backend
+
+backend grafana-lb-backend
+    balance roundrobin
+    server grafana1 192.168.0.71:3000 check
+    server grafana2 192.168.0.72:3000 check
+----
+
+And restart HAProxy plus checking the status:
+
+[source%nowrap,bash]
+----
+systemctl restart haproxy
+systemctl status haproxy
+----
+
+Open firewall on HAProxy host too:
+
+[source%nowrap,bash]
+----
+firewall-cmd --add-port=3000/tcp --permanent
+firewall-cmd --reload
+----
+
+==== Load balancers
+
+At this stage there should be four load balancers, all configured using round robin.
+
+image::images/haproxy.png[HAProxy]
+
+The Grafana LB is used for using Grafana itself. The Prometheus and Thanos Query LBs can now be used a data sources in Grafana.
+
+for reference, in this example there are:
+
+* Grafana:       http://192.168.0.70:3000
+* Alert Manager: http://192.168.0.70:9093
+* Prometheus:    http://192.168.0.70:9090
+* Thanos Query:  http://192.168.0.70:10904
+
+==== Data Sources
+
+In Grafana go to Configuration -> Data Sources, and "Add data source", select "Prometheus", under HTTP -> URL add the Thanos Query LB URL http://192.168.0.70:10904
+
+image::images/data-source.png[Grafana]
+
+==== Example Dashboard
+
+We have `node_exporter` running a some hosts and included them as scape targets in Prometheus. This is all out-of-the-box configuration. Most common metrics and dashboard have already being solved.
+
+To proved a flavour of the power here, take a look at this dashboard: https://grafana.com/grafana/dashboards/1860. (There are lots of others to search for).
+
+In Grafana, use the "+" sign in left hand menu and select "Import", enter the code, in this case "1860" and select "Load", then "Import:
+
+image::images/dash-import-1.png[Grafana]
+
+On the next screen, select Prometheus source in the drop down menu, and select "Import":
+
+image::images/dash-import-2.png[Grafana]
+
+You should now see some magic happen, the data source provides all the metrics from the node_exporter's picking out the hosts, which are available to select in a drop down menu and using similar Prometheus query's, visualise the data, quite impressive!
+
+image::images/node-dash.png[Grafana]
+
+Examining pre made dashboard such as this provides the inspiration and know-how for building custom dashboards.
 
 // This is a comment and won't be rendered.

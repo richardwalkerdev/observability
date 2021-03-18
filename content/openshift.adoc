@@ -1,6 +1,8 @@
-=== OpenShift
+=== Monitoring
 
 Time to deploy these stacks on OpenShift.
 
+
+=== Logging
 
 // This is a comment and won't be rendered.
