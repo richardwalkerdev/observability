@@ -2,13 +2,40 @@
 
 It obvious that all this manual implementation is not very practical, and sure, there are Ansible Roles available on Ansible Galaxy to deploy most of this stuff. That said, understanding the requirements close up and personally paves the way to automate this yourself.
 
+=== Remote Hosts
+
+These steps need to be repeated on any host intended to be managed by Ansible. To use a user account called "ansible" and become root, it helps in `/etc/sudoers` to allow `sudo` with no password, on each node to be managed by Ansible. For example:
+
+[source%nowrap,bash]
+----
+visudo
+----
+
+[source%nowrap,bash]
+----
+## Allows people in group wheel to run all commands
+#%wheel	ALL=(ALL)	ALL
+
+## Same thing without a password
+%wheel	ALL=(ALL)	NOPASSWD: ALL
+----
+
+Add that user on remote hosts make them a member of the `wheel` group:
+
+[source%nowrap,bash]
+----
+useradd ansible
+passwd ansible
+usermod -aG wheel ansible
+----
+
 === Quick Install
 
 Create a new working directory:
 
 [source%nowrap,bash]
 ----
-mkdir tower && cd tower
+mkdir ansible && cd ansible
 ----
 
 Create a new Python 3 Virtual Environment:
@@ -38,6 +65,8 @@ Install Ansible:
 ----
 pip install ansible
 ----
+
+=== Get Started
 
 Make the directory skeleton:
 
@@ -75,43 +104,7 @@ roles_path = ../../roles
 host_key_checking = False
 retry_files_enabled = False
 command_warnings = False
-remote_user = root
-----
-
-To use another user and become root, it helps in `/etc/sudoers` to allow `sudo` with no password:
-
-[source%nowrap,bash]
-----
-visudo
-----
-
-[source%nowrap,bash]
-----
-## Allows people in group wheel to run all commands
-#%wheel	ALL=(ALL)	ALL
-
-## Same thing without a password
-%wheel	ALL=(ALL)	NOPASSWD: ALL
-----
-
-User a user called `ansible` the `ansible.cfg` would look like this:
-
-[source%nowrap,bash]
-----
-[defaults]
-inventory = ../../inventories/lab
-roles_path = ../../roles
-host_key_checking = False
-retry_files_enabled = False
-command_warnings = False
 remote_user = ansible
-----
-
-And that user on remote hosts needs to be a member of the `wheel` group:
-
-[source%nowrap,bash]
-----
-usermod -aG whell ansible
 ----
 
 Create a basic smoke test role:
@@ -159,19 +152,8 @@ vi playbooks/lab/smoke_test.yml
 ----
 ---
 - name: Smoke Test Playbook
-  hosts: 192.168.0.177
-  remote_user: root
-  roles:
-    - smoke_test
-----
-
-Or if using a regular user account, in this case `ansible`:
-
-[source%nowrap,yaml]
-----
----
-- name: Smoke Test Playbook
-  hosts: 192.168.0.177
+  hosts: 192.168.0.71
+  remote_user: ansible
   become: yes
   roles:
     - smoke_test
@@ -184,18 +166,12 @@ Move into the `playbooks/lab/` directory:
 cd playbooks/lab/
 ----
 
-Copy your ID to the target server/s:
+Copy your ID to the target server/s, in this example `ansible`:
 
 [source%nowrap,bash]
 ----
-ssh-copy-id root@192.168.0.177
-----
-
-Or if using a regular user, in this example `ansible`:
-
-[source%nowrap,bash]
-----
-ssh-copy-id ansible@192.168.0.177
+ssh-copy-id ansible@192.168.0.71
+ssh-copy-id ansible@192.168.0.72
 ----
 
 Run the smoke test playbook:

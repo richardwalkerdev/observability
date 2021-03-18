@@ -4,6 +4,8 @@ Grafana is a popular technology used to compose observability dashboards in this
 
 It's very simple to deploy, and as default it uses a local SQLite database for single instances, the only step necessary to achieve high availability is configure the database settings for any number of Grafana instance to a shared database such as PostgresSQL.
 
+image::images/grafana_ha.png[Grafana]
+
 Add the Grafana repository:
 
 [source%nowrap,bash]
