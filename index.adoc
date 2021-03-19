@@ -32,6 +32,7 @@ include::content/loki.adoc[]
 
 == OpenShift
 
+include::content/kubernetes.adoc[]
 include::content/openshift.adoc[]
 
 include::content/conclusion.adoc[]
