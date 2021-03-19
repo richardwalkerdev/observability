@@ -240,7 +240,47 @@ I create a role for each component from scratch to keep things a simple and mini
 
 * https://galaxy.ansible.com/cloudalchemy/prometheus
 * https://galaxy.ansible.com/cloudalchemy/node_exporter
+* https://galaxy.ansible.com/cloudalchemy/alertmanager
+* https://galaxy.ansible.com/cloudalchemy/grafana
 
-=== Ansible Galaxy
+I still prefer to create them from scratch while getting to grips with things before adopting community versions.
+
+You can clone my Ansible repo here https://github.com/richardwalkerdev/observability-ansible-lab.git
+
+The only steps needed are to create the Python virtual environment with Ansible installed, activated and update the following to your needs:
+
+[source%nowrap,bash]
+----
+vi inventories/lab/group_vars/monitoring_servers.yml
+----
+
+
+[source%nowrap,yaml]
+----
+alertmanager_cluster_peers:
+  - '192.168.0.71'
+  - '192.168.0.72'
+
+thanos_store_stores:
+  - 192.168.0.71:10905
+  - 192.168.0.72:10905
+
+thanos_store_sidecars:
+  - 192.168.0.71:10901
+  - 192.168.0.72:10901
+
+grafana_db_host     : '192.168.0.70:5432'
+grafana_db_name     : 'grafana_db'
+grafana_db_user     : 'grafana'
+grafana_db_password : 'changeme'
+----
+
+Change into the `playbooks/lab/` directory, ensure `ansible.cfg` is correct and run:
+
+[source%nowrap,bash]
+----
+ansible-playbook deploy_all.yml
+----
+
 
 // This is a comment and won't be rendered.
