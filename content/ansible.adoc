@@ -1,6 +1,6 @@
 == Using Ansible
 
-It obvious that all this manual implementation is not very practical, and sure, there are Ansible Roles available on Ansible Galaxy to deploy most of this stuff. That said, understanding the requirements close up and personally paves the way to automate this yourself.
+It obvious that all this manual implementation is not very practical, and sure, there are Ansible Roles available on Ansible Galaxy to deploy most of this stuff. That said, understanding the requirements close up and personally paves the way to automate this yourself. I tend to use Ansible in this way from my client Linux laptop, it might be an idea to do it on the utilities host in this scenario!
 
 === Remote Hosts
 
@@ -87,6 +87,10 @@ vi inventories/lab/hosts
 192.168.0.70
 192.168.0.71
 192.168.0.72
+
+[monitoring_servers]
+192.168.0.71
+192.168.0.72
 ----
 
 Add an `ansible.cfg` file in the `playbooks/lab` directory:
@@ -141,7 +145,7 @@ vi roles/smoke_test/tasks/main.yml
   shell: echo "{{ message }}" > /tmp/smoke_test.yml
 ----
 
-Add a playbook for the smoke test:
+Add a playbook for the smoke test, this example if for a single server:
 
 [source%nowrap,bash]
 ----
@@ -153,6 +157,19 @@ vi playbooks/lab/smoke_test.yml
 ---
 - name: Smoke Test Playbook
   hosts: 192.168.0.71
+  remote_user: ansible
+  become: yes
+  roles:
+    - smoke_test
+----
+
+Or target the group of hosts:
+
+[source%nowrap,yaml]
+----
+---
+- name: Smoke Test Playbook
+  hosts: monitoring_servers
   remote_user: ansible
   become: yes
   roles:
@@ -183,9 +200,47 @@ ansible-playbook smoke_test.yml
 
 === Working with Facts
 
+Its useful to list facts for when define conditions on certain tasks, here is an example:
+
 [source%nowrap,bash]
 ----
 ansible all -m setup -a "filter=ansible_distribution*
 ----
+
+=== Group Vars
+
+Create a directory for the lab inventory called `group_vars` which will hold parameters that apply to the `monitoring_servers` group. This group includes `192.168.0.71` and `192.168.0.72`, paramters will apply to both these servers.
+
+[source%nowrap,bash]
+----
+mkdir -p inventories/lab/group_vars
+----
+
+[source%nowrap,bash]
+----
+vi inventories/lab/group_vars/monitoring_servers.yml
+----
+
+[source%nowrap,yaml]
+----
+---
+message: 'Hello World from group_vars!'
+----
+
+Run the smoke test playbook again and see that the group variables override the defaults:
+
+[source%nowrap,bash]
+----
+ansible-playbook smoke_test.yml
+----
+
+=== Add Roles
+
+I create a role for each component from scratch to keep things a simple and minimalistic as possible. Mature roles are available from Ansible Galaxy for example:
+
+* https://galaxy.ansible.com/cloudalchemy/prometheus
+* https://galaxy.ansible.com/cloudalchemy/node_exporter
+
+=== Ansible Galaxy
 
 // This is a comment and won't be rendered.
