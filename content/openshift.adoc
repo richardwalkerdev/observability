@@ -2,7 +2,12 @@
 
 Time to deploy these stacks on OpenShift.
 
+_Coming Soon_
+
 
 === Logging
+
+_Coming Soon_
+
 
 // This is a comment and won't be rendered.
