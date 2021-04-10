@@ -5,6 +5,79 @@ Time to deploy these stacks on OpenShift.
 _Coming Soon_
 
 
+==== Expose the internal registry
+
+
+==== Tag and push image
+
+Log into OpenShift cluster with cluster admin privelges, for example:
+
+----
+oc login -u admin -p changeme https://api.cluster.lab.com:6443
+----
+
+
+Swtich to `openshift-image-registry` project:
+
+----
+oc project openshift-image-registry
+----
+
+And get registroy route:
+
+----
+oc get routes
+----
+
+NOTE: For imformation regarding image registry see: https://www.richardwalker.dev/pragmatic-openshift/
+
+Loginto the registry using `podman`, for example:
+
+----
+podman login -u admin -p $(oc whoami -t) --tls-verify=false default-route-openshift-image-registry.apps.cluster.lab.com
+----
+
+
+In OpenShift, create a new project and image stream:
+
+----
+oc new-project django-toolkit-project
+oc create is django-toolkit-is
+----
+
+Get image stream URL:
+
+----
+oc get is
+----
+
+
+Tag the local image, using the OpenShift image stream:
+
+----
+podman tag richardwalker.dev/django-toolkit-img default-route-openshift-image-registry.apps.cluster.lab.com/django-toolkit-project/django-toolkit-is:latest
+----
+
+And push the image to registry:
+
+----
+podman push default-route-openshift-image-registry.apps.cluster.lab.com/django-toolkit-project/django-toolkit-is:latest
+----
+
+Create ne deployment:
+
+----
+oc new-app --as-deployment-config django-toolkit-is:latest
+----
+
+Expose the application:
+
+----
+oc expose service/django-toolkit-is
+oc get routes
+----
+
+
 === Logging
 
 _Coming Soon_

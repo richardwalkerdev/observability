@@ -30,6 +30,10 @@ include::content/ansible.adoc[]
 include::content/efk.adoc[]
 include::content/loki.adoc[]
 
+== Django
+
+include::content/django.adoc[]
+
 == OpenShift
 
 include::content/kubernetes.adoc[]
